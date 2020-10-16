@@ -32,12 +32,6 @@ class JsonResponse
     private $status_code;
 
     /**
-     * @var int
-     * @Type("int")
-     */
-    private $statuscode;
-
-    /**
      * @var mixed
      */
     private $data;
@@ -57,20 +51,15 @@ class JsonResponse
      */
     public function getStatusCode(): int
     {
-        return $this->status_code ?? $this->statuscode;
+        return $this->status_code;
     }
 
     /**
-     * @param int $statusCode
-     * @param bool $underscoreObjects
+     * @param int $status_code
      */
-    public function setStatusCode(int $statusCode, bool $underscoreObjects = true): void
+    public function setStatusCode(int $status_code): void
     {
-        if ($underscoreObjects) {
-            $this->status_code = $statusCode;
-            return;
-        }
-        $this->statuscode = $statusCode;
+        $this->status_code = $status_code;
     }
 
     /**
