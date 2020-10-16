@@ -20,7 +20,6 @@ namespace ApiCore\Validation;
 use ApiCore\Exception\Config;
 use ApiCore\Exception\ExceptionCore;
 use Http\StatusHttp;
-use Symfony\Component\Validator\ConstraintViolation;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -33,41 +32,99 @@ class ValidatorCore
     /**
      * @var ValidatorInterface
      */
-    private $validation;
+    private $validator;
+
+    /**
+     * @var array
+     */
+    private $errors = [];
+
+    private const MESSAGE_ERROR = "O objeto está vazio.";
 
     public function __construct()
     {
-        $this->validation = Validation::createValidatorBuilder()->enableAnnotationMapping()->getValidator();
+        $this->validator = Validation::createValidatorBuilder()->enableAnnotationMapping()->getValidator();
     }
 
     /**
      * @param ObjectCoreInterface|null $objectCore
-     * @param string|null $messageError
+     * @param int $statusCode
      * @throws ExceptionCore
      */
-    public function validateCore(?ObjectCoreInterface $objectCore, ?string $messageError = null): void
+    public function validateCore(?ObjectCoreInterface $objectCore,
+                                 int $statusCode = StatusHttp::UNPROCESSABLE_ENTITY): void
     {
         if (empty($objectCore)) {
             throw new ExceptionCore((new Config())
-                ->setStatusCode(StatusHttp::BAD_REQUEST)
-                ->setInternalMessageError($messageError));
+                ->setStatusCode($statusCode)
+                ->setInternalMessageError(self::MESSAGE_ERROR));
         }
 
-        $propertyConstraints = $this->validation->validate($objectCore);
-        $violations = [];
+        $violations = Violations::getViolations($this->validator, $objectCore);
 
-        foreach ($propertyConstraints as $value) {
-            if (!empty($value)) {
-                /** @var ConstraintViolation $value */
-                array_push($violations, $value->getMessage());
-            }
-        }
-
-        if (count($violations) > 0) {
+        if ($this->hasErrors($violations)) {
             throw new ExceptionCore((new Config())
-                ->setStatusCode(StatusHttp::BAD_REQUEST)
-                ->setMessageError($messageError)
+                ->setStatusCode($statusCode)
+                ->setMessageError(self::MESSAGE_ERROR)
                 ->setArrayError($violations));
         }
+    }
+
+    /**
+     * @param ObjectCoreInterface|null $objectCore
+     * @param int $statusCode
+     */
+    public function checkCoreErrors(?ObjectCoreInterface $objectCore,
+                                    int $statusCode = StatusHttp::UNPROCESSABLE_ENTITY): void
+    {
+        if (empty($objectCore)) {
+            $exceptionCore = new ExceptionCore((new Config())
+                ->setStatusCode($statusCode)
+                ->setInternalMessageError(self::MESSAGE_ERROR));
+            $this->addError($exceptionCore);
+        }
+
+        $violations = Violations::getViolations($this->validator, $objectCore);
+
+        if ($this->hasErrors($violations)) {
+            $exceptionCore = new ExceptionCore((new Config())
+                ->setStatusCode($statusCode)
+                ->setMessageError(self::MESSAGE_ERROR)
+                ->setArrayError($violations));
+            $this->addAllErrors($exceptionCore->getCustomError());
+        }
+    }
+
+    /**
+     * @param array $errors
+     * @return bool
+     */
+    public function hasErrors(array $errors): bool
+    {
+        return (count($errors) > 0);
+    }
+
+    /**
+     * @param array $errors
+     */
+    public function addAllErrors(array $errors): void
+    {
+        $this->errors = array_merge($this->errors, $errors);
+    }
+
+    /**
+     * @param ExceptionCore $error
+     */
+    public function addError(ExceptionCore $error): void
+    {
+        $this->errors[] = $error;
+    }
+
+    /**
+     * @return array
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 }
