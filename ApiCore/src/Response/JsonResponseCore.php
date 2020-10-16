@@ -79,7 +79,7 @@ final class JsonResponseCore extends Response
         }
 
         $this->defaultCode = $apiCore["default_code_error"] ?? -1;
-        $this->defaultMessage = $apiCore["default_message_error"] ?? "Ocorreu um erro inesperado na aplicação!";
+        $this->defaultMessage = $apiCore["default_message_error"] ?? "Ocorreu um erro inesperado na aplicação.";
         $this->defaultBaseUri = $apiCore["default_base_uri"] ?? null;
     }
 
